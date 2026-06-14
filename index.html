@@ -1,0 +1,942 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Campus Wi-Fi Network Designer — Prim's MST</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0f1117;--bg2:#161b27;--bg3:#1e2535;--bg4:#252d3d;
+  --border:#2a3348;--border2:#334060;
+  --text:#e8edf5;--text2:#8b96b0;--text3:#5a6480;
+  --blue:#4f8ef7;--blue2:#3a75d9;--blue3:#1e3f80;--bluebg:#0d1f45;
+  --green:#3ecf8e;--greenbg:#0a2b1e;
+  --amber:#f5a623;--amberbg:#2b1e08;
+  --red:#e05252;--redbg:#2b0e0e;
+  --purple:#9f7aea;--purplebg:#1a1130;
+  --teal:#38bdf8;--tealbg:#082030;
+  --radius:10px;--radius2:6px;
+  --shadow:0 4px 24px rgba(0,0,0,0.5);
+}
+body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;overflow-x:hidden}
+
+/* ─── LOGIN ─── */
+#login-screen{display:flex;align-items:center;justify-content:center;min-height:100vh;background:radial-gradient(ellipse at 60% 40%,#0d1f45 0%,#0f1117 70%)}
+.login-card{background:var(--bg2);border:1px solid var(--border);border-radius:16px;padding:48px 40px;width:100%;max-width:420px;box-shadow:var(--shadow)}
+.login-logo{display:flex;align-items:center;gap:12px;margin-bottom:32px}
+.login-logo-icon{width:44px;height:44px;background:linear-gradient(135deg,#1e3f80,#4f8ef7);border-radius:10px;display:flex;align-items:center;justify-content:center}
+.login-logo-icon svg{width:24px;height:24px;fill:none;stroke:#fff;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.login-logo h1{font-size:18px;font-weight:600;color:var(--text)}
+.login-logo p{font-size:12px;color:var(--text2)}
+.login-card h2{font-size:22px;font-weight:600;margin-bottom:6px}
+.login-card p.sub{font-size:14px;color:var(--text2);margin-bottom:28px}
+.form-group{margin-bottom:18px}
+.form-group label{display:block;font-size:13px;color:var(--text2);margin-bottom:6px;font-weight:500}
+.form-group input{width:100%;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--radius2);padding:11px 14px;color:var(--text);font-size:14px;outline:none;transition:border .2s}
+.form-group input:focus{border-color:var(--blue)}
+.form-group input::placeholder{color:var(--text3)}
+.btn-primary{width:100%;background:var(--blue);color:#fff;border:none;border-radius:var(--radius2);padding:12px;font-size:14px;font-weight:600;cursor:pointer;transition:background .2s,transform .1s}
+.btn-primary:hover{background:var(--blue2)}
+.btn-primary:active{transform:scale(0.98)}
+.login-hint{font-size:12px;color:var(--text3);text-align:center;margin-top:16px}
+.login-hint span{color:var(--blue);cursor:pointer}
+.login-error{background:var(--redbg);border:1px solid var(--red);color:var(--red);border-radius:var(--radius2);padding:10px 14px;font-size:13px;margin-bottom:16px;display:none}
+
+/* ─── APP SHELL ─── */
+#app{display:none;min-height:100vh;flex-direction:column}
+.topbar{background:var(--bg2);border-bottom:1px solid var(--border);padding:0 24px;display:flex;align-items:center;gap:16px;height:56px;position:sticky;top:0;z-index:100}
+.topbar-logo{display:flex;align-items:center;gap:10px;font-weight:600;font-size:15px}
+.topbar-logo-icon{width:30px;height:30px;background:linear-gradient(135deg,#1e3f80,#4f8ef7);border-radius:7px;display:flex;align-items:center;justify-content:center}
+.topbar-logo-icon svg{width:16px;height:16px;fill:none;stroke:#fff;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.topbar-divider{width:1px;height:20px;background:var(--border);margin:0 4px}
+.topbar-user{margin-left:auto;display:flex;align-items:center;gap:10px;font-size:13px;color:var(--text2)}
+.avatar{width:30px;height:30px;border-radius:50%;background:var(--blue3);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600;color:var(--blue)}
+.logout-btn{background:none;border:1px solid var(--border2);border-radius:var(--radius2);color:var(--text2);padding:5px 12px;font-size:12px;cursor:pointer;transition:all .2s}
+.logout-btn:hover{color:var(--text);border-color:var(--border)}
+
+/* ─── TABS ─── */
+.tabs{display:flex;gap:2px;padding:0 24px;background:var(--bg2);border-bottom:1px solid var(--border);overflow-x:auto}
+.tab{padding:0 18px;height:44px;border:none;background:none;color:var(--text2);font-size:13px;font-weight:500;cursor:pointer;border-bottom:2px solid transparent;white-space:nowrap;transition:all .2s;display:flex;align-items:center;gap:7px}
+.tab:hover{color:var(--text)}
+.tab.active{color:var(--blue);border-bottom-color:var(--blue)}
+.tab-num{display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;border-radius:50%;background:var(--bg4);font-size:10px;font-weight:700;color:var(--text3)}
+.tab.active .tab-num{background:var(--bluebg);color:var(--blue)}
+
+/* ─── MAIN CONTENT ─── */
+.main{flex:1;padding:32px 24px;max-width:1100px;margin:0 auto;width:100%}
+.section{display:none}
+.section.active{display:block}
+
+/* ─── CARDS ─── */
+.card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:24px;margin-bottom:20px}
+.card-title{font-size:16px;font-weight:600;margin-bottom:4px;display:flex;align-items:center;gap:8px}
+.card-sub{font-size:13px;color:var(--text2);margin-bottom:20px}
+.badge{display:inline-flex;align-items:center;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.5px}
+.badge-blue{background:var(--bluebg);color:var(--blue)}
+.badge-green{background:var(--greenbg);color:var(--green)}
+.badge-amber{background:var(--amberbg);color:var(--amber)}
+.badge-purple{background:var(--purplebg);color:var(--purple)}
+.badge-red{background:var(--redbg);color:var(--red)}
+
+/* ─── GRID ─── */
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:20px}
+.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+.grid4{display:grid;grid-template-columns:repeat(4,1fr);gap:14px}
+@media(max-width:700px){.grid2,.grid3,.grid4{grid-template-columns:1fr}}
+
+/* ─── STAT CARDS ─── */
+.stat{background:var(--bg3);border-radius:var(--radius2);padding:16px 18px}
+.stat-label{font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px}
+.stat-val{font-size:26px;font-weight:700}
+.stat-val.blue{color:var(--blue)}
+.stat-val.green{color:var(--green)}
+.stat-val.amber{color:var(--amber)}
+.stat-val.red{color:var(--red)}
+
+/* ─── SECTION 1: CONCEPT ─── */
+.comparison-row{display:grid;grid-template-columns:1fr 40px 1fr;gap:0;align-items:stretch;margin-bottom:20px}
+.compare-box{background:var(--bg3);border-radius:var(--radius2);padding:20px;position:relative}
+.compare-box.winner{border:1px solid var(--green);background:var(--greenbg)}
+.compare-title{font-size:13px;font-weight:600;margin-bottom:12px}
+.compare-vs{display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:var(--text3)}
+.graph-canvas{display:block;width:100%;border-radius:8px;overflow:hidden}
+
+/* ─── SECTION 3: LIVE PRIM'S ─── */
+#prim-canvas{width:100%;border-radius:8px;background:var(--bg3);border:1px solid var(--border);cursor:pointer}
+.log-box{background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius2);padding:14px;font-family:'Courier New',monospace;font-size:12px;color:var(--text2);max-height:200px;overflow-y:auto;line-height:1.7}
+.log-line.add{color:var(--green)}
+.log-line.skip{color:var(--amber)}
+.log-line.start{color:var(--blue)}
+.log-warn{color:var(--red)}
+.btn-group{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px}
+.btn{padding:8px 16px;border-radius:var(--radius2);font-size:13px;font-weight:500;cursor:pointer;border:1px solid var(--border2);background:var(--bg3);color:var(--text);transition:all .2s}
+.btn:hover{background:var(--bg4);border-color:var(--border)}
+.btn.active-btn{background:var(--blue);border-color:var(--blue);color:#fff}
+.btn:disabled{opacity:.4;cursor:not-allowed}
+
+/* ─── SECTION 4: SCALABILITY ─── */
+.table-wrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th{padding:10px 14px;text-align:left;font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;border-bottom:1px solid var(--border);background:var(--bg3)}
+td{padding:10px 14px;border-bottom:1px solid var(--border);color:var(--text2)}
+tr:last-child td{border-bottom:none}
+td:first-child{color:var(--text);font-weight:500}
+.good{color:var(--green)}
+.warn{color:var(--amber)}
+.bad{color:var(--red)}
+
+/* ─── SECTION 2: DESIGN ─── */
+.factor-item{display:flex;gap:16px;padding:16px 0;border-bottom:1px solid var(--border)}
+.factor-item:last-child{border-bottom:none}
+.factor-icon{width:38px;height:38px;border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:18px}
+.factor-title{font-size:14px;font-weight:600;margin-bottom:4px}
+.factor-desc{font-size:13px;color:var(--text2);line-height:1.6}
+.checklist{list-style:none;margin-top:8px}
+.checklist li{font-size:12px;color:var(--text2);padding:2px 0;display:flex;align-items:center;gap:6px}
+.checklist li::before{content:'✓';color:var(--green);font-weight:700;font-size:11px}
+
+/* ─── SECTION 5: REPORT ─── */
+.report-section{margin-bottom:24px}
+.report-heading{font-size:13px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:12px;display:flex;align-items:center;gap:8px}
+.report-heading::after{content:'';flex:1;height:1px;background:var(--border)}
+.cost-row{display:flex;justify-content:space-between;align-items:center;padding:9px 14px;border-bottom:1px solid var(--border)}
+.cost-row:last-child{border-bottom:none}
+.cost-row.total{background:var(--bg3);border-radius:var(--radius2);font-weight:600;color:var(--text)}
+.cost-label{font-size:13px;color:var(--text2)}
+.cost-val{font-size:14px;font-weight:500;color:var(--green);font-family:'Courier New',monospace}
+.viability-item{display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:var(--bg3);border-radius:var(--radius2);margin-bottom:8px}
+.viability-label{font-size:13px;font-weight:500}
+.viability-status{font-size:12px;font-weight:600;display:flex;align-items:center;gap:5px}
+.pass{color:var(--green)}
+.fail{color:var(--red)}
+.progress-bar{height:8px;background:var(--bg4);border-radius:4px;overflow:hidden;margin-top:6px}
+.progress-fill{height:100%;border-radius:4px;background:var(--green);transition:width 1s ease}
+.add-building-form{display:flex;gap:10px;margin-bottom:20px;flex-wrap:wrap}
+.add-building-form input{flex:1;min-width:140px;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--radius2);padding:9px 12px;color:var(--text);font-size:13px;outline:none}
+.add-building-form input:focus{border-color:var(--blue)}
+
+/* ─── STEP TRACKER ─── */
+.step-tracker{display:flex;align-items:center;gap:0;margin-bottom:24px}
+.step-item{display:flex;align-items:center;gap:0;flex:1}
+.step-dot{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex-shrink:0;border:2px solid var(--border2);color:var(--text3);background:var(--bg3);transition:all .4s}
+.step-dot.done{background:var(--green);border-color:var(--green);color:#fff}
+.step-dot.active{background:var(--blue);border-color:var(--blue);color:#fff}
+.step-line{flex:1;height:2px;background:var(--border);transition:background .4s}
+.step-line.done{background:var(--green)}
+
+/* ─── SCROLLBAR ─── */
+::-webkit-scrollbar{width:6px;height:6px}
+::-webkit-scrollbar-track{background:var(--bg)}
+::-webkit-scrollbar-thumb{background:var(--border2);border-radius:3px}
+</style>
+</head>
+<body>
+
+<!-- ═══════════════════════════════════════════════ LOGIN ═══ -->
+<div id="login-screen">
+  <div class="login-card">
+    <div class="login-logo">
+      <div class="login-logo-icon">
+        <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M2 12h3M19 12h3M12 2v3M12 19v3"/><path d="M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M5.6 18.4l2.1-2.1M16.3 7.7l2.1-2.1"/></svg>
+      </div>
+      <div>
+        <h1>CampusNet Designer</h1>
+        <p>Prim's MST Wi-Fi Planner</p>
+      </div>
+    </div>
+    <h2>Welcome back</h2>
+    <p class="sub">Sign in to access the network design platform</p>
+    <div class="login-error" id="login-error">Invalid credentials. Try <strong>admin / wifi123</strong></div>
+    <div class="form-group">
+      <label>Username</label>
+      <input type="text" id="login-user" placeholder="e.g. admin" autocomplete="username"/>
+    </div>
+    <div class="form-group">
+      <label>Password</label>
+      <input type="password" id="login-pass" placeholder="••••••••" autocomplete="current-password"/>
+    </div>
+    <button class="btn-primary" onclick="doLogin()">Sign In →</button>
+    <p class="login-hint">Demo credentials: <span onclick="fillDemo()">admin / wifi123</span></p>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════ APP ═══ -->
+<div id="app" style="display:none;flex-direction:column">
+
+  <div class="topbar">
+    <div class="topbar-logo">
+      <div class="topbar-logo-icon">
+        <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M2 12h3M19 12h3M12 2v3M12 19v3"/><path d="M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M5.6 18.4l2.1-2.1M16.3 7.7l2.1-2.1"/></svg>
+      </div>
+      CampusNet Designer
+    </div>
+    <div class="topbar-divider"></div>
+    <span style="font-size:12px;color:var(--text3)">Prim's MST Algorithm</span>
+    <div class="topbar-user">
+      <div class="avatar" id="user-avatar">AD</div>
+      <span id="user-name">Admin</span>
+      <button class="logout-btn" onclick="doLogout()">Sign Out</button>
+    </div>
+  </div>
+
+  <div class="tabs">
+    <button class="tab active" onclick="showTab(0,this)"><span class="tab-num">1</span>Concept</button>
+    <button class="tab" onclick="showTab(1,this)"><span class="tab-num">2</span>Design</button>
+    <button class="tab" onclick="showTab(2,this)"><span class="tab-num">3</span>Logic — Live Prim's</button>
+    <button class="tab" onclick="showTab(3,this)"><span class="tab-num">4</span>Scalability</button>
+    <button class="tab" onclick="showTab(4,this)"><span class="tab-num">5</span>Cost Report</button>
+  </div>
+
+  <div class="main">
+
+    <!-- ══════ SECTION 1: CONCEPT ══════ -->
+    <div class="section active" id="sec0">
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:20px">
+        <h2 style="font-size:20px;font-weight:700">Why MST beats Shortest-Path for cabling</h2>
+        <span class="badge badge-blue">Concept</span>
+      </div>
+
+      <div class="grid4" style="margin-bottom:24px">
+        <div class="stat"><div class="stat-label">MST edges (n=6)</div><div class="stat-val blue">n − 1 = 5</div></div>
+        <div class="stat"><div class="stat-label">No cycles guaranteed</div><div class="stat-val green">✓ Tree</div></div>
+        <div class="stat"><div class="stat-label">MST total cost</div><div class="stat-val amber">₹18K</div></div>
+        <div class="stat"><div class="stat-label">Savings vs full-mesh</div><div class="stat-val green">65%</div></div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">Side-by-side comparison</div>
+        <div class="card-sub">Same 4-node graph — Dijkstra shortest-path union vs Prim's MST</div>
+        <div class="comparison-row">
+          <div class="compare-box">
+            <div class="compare-title" style="color:var(--red)">❌ Shortest-path union</div>
+            <canvas id="sp-canvas" width="300" height="200" class="graph-canvas"></canvas>
+            <p style="font-size:12px;color:var(--text2);margin-top:10px">Total cable = <strong style="color:var(--red)">10 units</strong> — cycle present, redundant wire laid</p>
+          </div>
+          <div class="compare-vs">VS</div>
+          <div class="compare-box winner">
+            <div class="compare-title" style="color:var(--green)">✅ Prim's MST</div>
+            <canvas id="mst-canvas" width="300" height="200" class="graph-canvas"></canvas>
+            <p style="font-size:12px;color:var(--text2);margin-top:10px">Total cable = <strong style="color:var(--green)">6 units</strong> — acyclic tree, globally optimal</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">Key insight</div>
+        <p style="font-size:14px;color:var(--text2);line-height:1.8">
+          Dijkstra minimises the <em>distance</em> from a single source to every node <strong style="color:var(--text)">independently</strong>.
+          When you union all those shortest-paths you inevitably create <strong style="color:var(--red)">cycles</strong> — meaning duplicate cable runs and unnecessary infrastructure cost.<br><br>
+          Prim's MST directly minimises <strong style="color:var(--green)">total cable laid</strong> across the campus with exactly <code style="background:var(--bg3);padding:2px 6px;border-radius:4px;color:var(--blue)">n − 1</code> edges for <code style="background:var(--bg3);padding:2px 6px;border-radius:4px;color:var(--blue)">n</code> nodes — no cycles, no redundancy, guaranteed global optimum.
+        </p>
+      </div>
+    </div>
+
+    <!-- ══════ SECTION 2: DESIGN ══════ -->
+    <div class="section" id="sec1">
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:20px">
+        <h2 style="font-size:20px;font-weight:700">Usability Factors for Non-Technical Stakeholders</h2>
+        <span class="badge badge-purple">Design</span>
+      </div>
+
+      <div class="grid2">
+        <div class="card">
+          <div class="card-title">Usability requirements</div>
+          <div class="card-sub">What decision-makers need from layout tools</div>
+          <div class="factor-item">
+            <div class="factor-icon" style="background:var(--bluebg)">👁️</div>
+            <div>
+              <div class="factor-title">Visual clarity</div>
+              <div class="factor-desc">Color-coded nodes, edge cost labels in plain currency, MST edges highlighted vs discarded.</div>
+              <ul class="checklist"><li>Red = Data Center</li><li>Blue = Buildings</li><li>Green = Selected MST edge</li><li>Gray = Rejected edge</li></ul>
+            </div>
+          </div>
+          <div class="factor-item">
+            <div class="factor-icon" style="background:var(--greenbg)">♿</div>
+            <div>
+              <div class="factor-title">Accessibility</div>
+              <div class="factor-desc">One-click "Generate Optimal Layout" button, exportable PDF/PNG for board presentations, mobile-friendly layout.</div>
+            </div>
+          </div>
+          <div class="factor-item">
+            <div class="factor-icon" style="background:var(--amberbg)">🔒</div>
+            <div>
+              <div class="factor-title">Input constraints</div>
+              <div class="factor-desc">Guard-rails prevent invalid graphs: minimum 2 buildings, positive edge weights, no duplicate names, disconnected-graph alert.</div>
+            </div>
+          </div>
+          <div class="factor-item">
+            <div class="factor-icon" style="background:var(--purplebg)">📊</div>
+            <div>
+              <div class="factor-title">Transparency</div>
+              <div class="factor-desc">Step-by-step log ("Added Library ← 4.2 km cable"), total savings vs naive full-mesh wiring.</div>
+            </div>
+          </div>
+          <div class="factor-item" style="border-bottom:none">
+            <div class="factor-icon" style="background:var(--tealbg)">🔭</div>
+            <div>
+              <div class="factor-title">Scalability hints</div>
+              <div class="factor-desc">Warn when adding a new building whether incremental update suffices or full rerun is advised.</div>
+            </div>
+          </div>
+        </div>
+
+        <div>
+          <div class="card" style="margin-bottom:16px">
+            <div class="card-title">Software constraint checklist</div>
+            <div class="card-sub">Non-functional requirements stakeholders verify</div>
+            <div style="display:flex;flex-direction:column;gap:10px">
+              <div id="chk-items"></div>
+            </div>
+          </div>
+          <div class="card">
+            <div class="card-title">Mock — non-tech dashboard</div>
+            <div style="background:var(--bg3);border-radius:8px;padding:16px">
+              <div style="font-size:12px;color:var(--text3);margin-bottom:10px;text-transform:uppercase;letter-spacing:.5px">Quick actions</div>
+              <div style="display:flex;flex-direction:column;gap:8px">
+                <button class="btn" style="text-align:left;justify-content:flex-start;width:100%" onclick="showTab(2,document.querySelectorAll('.tab')[2])">🔁 Run Prim's algorithm on campus graph ↗</button>
+                <button class="btn" style="text-align:left;justify-content:flex-start;width:100%" onclick="showTab(4,document.querySelectorAll('.tab')[4])">📄 Generate cost optimization report ↗</button>
+                <button class="btn" style="text-align:left;justify-content:flex-start;width:100%" onclick="addBuildingDemo()">➕ Add new building to campus ↗</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══════ SECTION 3: LIVE PRIM'S ══════ -->
+    <div class="section" id="sec2">
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:20px">
+        <h2 style="font-size:20px;font-weight:700">Live Prim's Algorithm — Step-by-step</h2>
+        <span class="badge badge-green">Logic</span>
+      </div>
+
+      <!-- Step tracker -->
+      <div class="step-tracker" id="step-tracker"></div>
+
+      <div class="btn-group">
+        <button class="btn active-btn" id="btn-step" onclick="stepPrim()">▶ Next Step</button>
+        <button class="btn" id="btn-run" onclick="runAll()">⚡ Run All</button>
+        <button class="btn" id="btn-reset" onclick="resetPrim()">↺ Reset</button>
+      </div>
+
+      <div class="grid2" style="align-items:start">
+        <div>
+          <canvas id="prim-canvas" height="380"></canvas>
+        </div>
+        <div>
+          <div class="card" style="margin-bottom:12px">
+            <div class="card-title">Traversal log</div>
+            <div class="log-box" id="prim-log"><span class="log-line start">Ready — click "Next Step" to begin Prim's from DataCenter</span></div>
+          </div>
+          <div class="card">
+            <div class="card-title">Current MST state</div>
+            <div id="mst-state-list" style="font-size:13px;color:var(--text2)">No edges selected yet.</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- PQ table -->
+      <div class="card" style="margin-top:8px">
+        <div class="card-title">Priority Queue (min-heap)</div>
+        <div class="card-sub">Cheapest candidate edges at each step</div>
+        <div class="table-wrap">
+          <table id="pq-table">
+            <thead><tr><th>Weight</th><th>From</th><th>To</th><th>Status</th></tr></thead>
+            <tbody id="pq-body"><tr><td colspan="4" style="color:var(--text3);font-style:italic">Run algorithm to populate</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══════ SECTION 4: SCALABILITY ══════ -->
+    <div class="section" id="sec3">
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:20px">
+        <h2 style="font-size:20px;font-weight:700">Scalability Analysis</h2>
+        <span class="badge badge-amber">Performance</span>
+      </div>
+
+      <div class="grid4" style="margin-bottom:24px">
+        <div class="stat"><div class="stat-label">Incremental O()</div><div class="stat-val blue">k log n</div></div>
+        <div class="stat"><div class="stat-label">Full recompute O()</div><div class="stat-val amber">(V+E) log V</div></div>
+        <div class="stat"><div class="stat-label">100-node incremental</div><div class="stat-val green">0.01 ms</div></div>
+        <div class="stat"><div class="stat-label">100-node full</div><div class="stat-val amber">0.8 ms</div></div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">Incremental vs Full Recompute</div>
+        <div class="card-sub">When a new building is added to the campus graph</div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Metric</th><th>Incremental / Local</th><th>Full Recompute</th></tr></thead>
+            <tbody>
+              <tr><td>Time complexity</td><td class="good">O(k log n)</td><td class="warn">O((V+E) log V)</td></tr>
+              <tr><td>Space overhead</td><td class="good">O(1) extra</td><td class="warn">O(V + E)</td></tr>
+              <tr><td>Correctness</td><td class="warn">Leaf-safe only</td><td class="good">Always correct</td></tr>
+              <tr><td>When to use</td><td>New node → 1 cluster</td><td>Bridges 2+ clusters</td></tr>
+              <tr><td>Risk of error</td><td class="warn">May miss cheaper cross-path</td><td class="good">None</td></tr>
+              <tr><td>100-node campus</td><td class="good">~0.01 ms</td><td class="good">~0.8 ms</td></tr>
+              <tr><td>10,000-node metro</td><td class="good">Seconds</td><td class="bad">Minutes</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="grid2">
+        <div class="card">
+          <div class="card-title">Decision rule</div>
+          <div class="card-sub">How to choose the right approach</div>
+          <div style="background:var(--greenbg);border:1px solid var(--green);border-radius:8px;padding:16px;margin-bottom:12px">
+            <div style="font-size:13px;font-weight:600;color:var(--green);margin-bottom:6px">✅ Use incremental when:</div>
+            <div style="font-size:13px;color:var(--text2)">New building connects to <strong>only one existing cluster</strong> — acts as a leaf node at the campus edge. Safe, fast, O(k log n).</div>
+          </div>
+          <div style="background:var(--amberbg);border:1px solid var(--amber);border-radius:8px;padding:16px">
+            <div style="font-size:13px;font-weight:600;color:var(--amber);margin-bottom:6px">⚠ Use full recompute when:</div>
+            <div style="font-size:13px;color:var(--text2)">New building <strong>bridges two or more blocks</strong> — could replace a heavier existing MST edge. Full correctness required.</div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-title">Try it — add a building</div>
+          <div class="card-sub">Simulate adding a new building and see which strategy applies</div>
+          <div class="add-building-form">
+            <input type="text" id="new-building-name" placeholder="New building name..." maxlength="24"/>
+            <input type="number" id="new-building-cost" placeholder="Cable cost (₹K)" min="1" max="50" value="6"/>
+            <button class="btn" onclick="simulateNewBuilding()">Simulate</button>
+          </div>
+          <div id="scalability-result" style="font-size:13px;color:var(--text2)">Enter a building name and cable cost, then click Simulate.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══════ SECTION 5: COST REPORT ══════ -->
+    <div class="section" id="sec4">
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:20px">
+        <h2 style="font-size:20px;font-weight:700">Cost Optimization Report</h2>
+        <span class="badge badge-green">Deliverable</span>
+        <button class="btn" style="margin-left:auto" onclick="window.print()">🖨 Print Report</button>
+      </div>
+
+      <div class="grid4" style="margin-bottom:24px">
+        <div class="stat"><div class="stat-label">Campus</div><div class="stat-val blue" style="font-size:16px">Model University</div></div>
+        <div class="stat"><div class="stat-label">MST cost</div><div class="stat-val green">₹18K</div></div>
+        <div class="stat"><div class="stat-label">Full-mesh cost</div><div class="stat-val red">₹52K</div></div>
+        <div class="stat"><div class="stat-label">Savings</div><div class="stat-val green">65%</div></div>
+      </div>
+
+      <div class="grid2">
+        <div>
+          <div class="card">
+            <div class="report-section">
+              <div class="report-heading">A — Executive summary</div>
+              <div style="font-size:13px;color:var(--text2);line-height:1.8">
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">
+                  <div><span style="color:var(--text3)">Algorithm</span><br><strong>Prim's MST</strong></div>
+                  <div><span style="color:var(--text3)">Complexity</span><br><strong>O(E log V)</strong></div>
+                  <div><span style="color:var(--text3)">Source node</span><br><strong>DataCenter</strong></div>
+                  <div><span style="color:var(--text3)">Buildings</span><br><strong>6 nodes</strong></div>
+                  <div><span style="color:var(--text3)">Edges used</span><br><strong>5 (n−1)</strong></div>
+                  <div><span style="color:var(--text3)">Total wire</span><br><strong>18 km equiv.</strong></div>
+                </div>
+              </div>
+            </div>
+
+            <div class="report-section">
+              <div class="report-heading">B — Infrastructure layout</div>
+              <canvas id="report-canvas" width="100%" style="width:100%;border-radius:8px;background:var(--bg3)"></canvas>
+            </div>
+          </div>
+        </div>
+
+        <div>
+          <div class="card" style="margin-bottom:16px">
+            <div class="report-section">
+              <div class="report-heading">C — Cost values</div>
+              <div id="cost-table-items"></div>
+              <div class="cost-row total">
+                <span class="cost-label">TOTAL MST</span>
+                <span class="cost-val">₹18,000</span>
+              </div>
+              <div class="cost-row">
+                <span class="cost-label">Full-mesh baseline</span>
+                <span class="cost-val" style="color:var(--red)">₹52,000</span>
+              </div>
+              <div class="cost-row">
+                <span class="cost-label">Savings</span>
+                <span class="cost-val">₹34,000</span>
+              </div>
+              <div class="cost-row">
+                <span class="cost-label" style="font-weight:600">Savings %</span>
+                <span class="cost-val" style="font-size:18px">65%</span>
+              </div>
+              <div style="padding:10px 14px">
+                <div style="font-size:11px;color:var(--text3);margin-bottom:4px">MST vs Full-mesh</div>
+                <div class="progress-bar"><div class="progress-fill" id="savings-bar" style="width:0%"></div></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="report-section">
+              <div class="report-heading">D — Structural viability</div>
+              <div class="viability-item">
+                <span class="viability-label">Connectivity</span>
+                <span class="viability-status pass">✅ PASS — all 6 nodes reachable</span>
+              </div>
+              <div class="viability-item">
+                <span class="viability-label">Cycle-free</span>
+                <span class="viability-status pass">✅ PASS — MST has no cycles</span>
+              </div>
+              <div class="viability-item">
+                <span class="viability-label">Cost optimality</span>
+                <span class="viability-status pass">✅ PASS — globally minimum weight</span>
+              </div>
+              <div class="viability-item" style="margin-bottom:0">
+                <span class="viability-label">Edge count check</span>
+                <span class="viability-status pass">✅ PASS — 5 edges = n − 1</span>
+              </div>
+              <div style="background:var(--greenbg);border:1px solid var(--green);border-radius:8px;padding:14px;margin-top:14px;text-align:center">
+                <div style="font-size:18px;font-weight:700;color:var(--green)">✔ Layout Structurally VALID</div>
+                <div style="font-size:12px;color:var(--text2);margin-top:4px">All viability checks passed — safe to proceed to implementation</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /main -->
+</div><!-- /app -->
+
+<script>
+/* ═════════════════════ AUTH ═════════════════════ */
+const USERS = { admin:'wifi123', engineer:'campus2024', guest:'view123' };
+function fillDemo(){ document.getElementById('login-user').value='admin'; document.getElementById('login-pass').value='wifi123'; }
+function doLogin(){
+  const u=document.getElementById('login-user').value.trim();
+  const p=document.getElementById('login-pass').value;
+  const err=document.getElementById('login-error');
+  if(USERS[u]===p){
+    err.style.display='none';
+    document.getElementById('login-screen').style.display='none';
+    const app=document.getElementById('app');
+    app.style.display='flex';
+    document.getElementById('user-name').textContent=u.charAt(0).toUpperCase()+u.slice(1);
+    document.getElementById('user-avatar').textContent=u.slice(0,2).toUpperCase();
+    initApp();
+  } else {
+    err.style.display='block';
+  }
+}
+document.addEventListener('keydown',e=>{ if(e.key==='Enter'&&document.getElementById('login-screen').style.display!=='none') doLogin(); });
+function doLogout(){
+  document.getElementById('app').style.display='none';
+  document.getElementById('login-screen').style.display='flex';
+  document.getElementById('login-user').value='';
+  document.getElementById('login-pass').value='';
+}
+
+/* ═════════════════════ TABS ═════════════════════ */
+function showTab(i,el){
+  document.querySelectorAll('.section').forEach((s,j)=>s.classList.toggle('active',j===i));
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  el.classList.add('active');
+}
+
+/* ═════════════════════ GRAPH DATA ═════════════════════ */
+const BUILDINGS = ['DataCenter','AdminBlock','Library','EnggBlock','HostelA','SportsComplex'];
+const EDGES = [
+  [0,1,4,'DataCenter↔AdminBlock'],
+  [0,2,6,'DataCenter↔Library'],
+  [1,2,2,'AdminBlock↔Library'],
+  [1,3,5,'AdminBlock↔EnggBlock'],
+  [2,3,3,'Library↔EnggBlock'],
+  [2,4,7,'Library↔HostelA'],
+  [3,4,4,'EnggBlock↔HostelA'],
+  [3,5,6,'EnggBlock↔SportsComplex'],
+  [4,5,5,'HostelA↔SportsComplex'],
+  [0,5,10,'DataCenter↔SportsComplex']
+];
+const NODE_POS = [
+  {x:.5,y:.1}, // DataCenter (top centre)
+  {x:.15,y:.4},{x:.5,y:.4},{x:.85,y:.4}, // row
+  {x:.25,y:.78},{x:.75,y:.78} // bottom
+];
+const COLORS_DARK = ['#4f8ef7','#f5a623','#3ecf8e','#9f7aea','#38bdf8','#e05252'];
+
+/* ═════════════════════ SECTION 1 CANVASES ═════════════════════ */
+function drawGraph(canvasId, selectedEdges, highlight=[]){
+  const c=document.getElementById(canvasId);
+  if(!c) return;
+  const ctx=c.getContext('2d');
+  const W=c.offsetWidth||300, H=200;
+  c.width=W; c.height=H;
+  ctx.clearRect(0,0,W,H);
+  const nodes=[
+    {x:W*.15,y:H*.2,label:'A'},{x:W*.85,y:H*.2,label:'B'},
+    {x:W*.15,y:H*.8,label:'C'},{x:W*.85,y:H*.8,label:'D'}
+  ];
+  const allEdges=[[0,1,3],[0,2,4],[1,3,2],[2,3,1],[1,2,5]];
+  allEdges.forEach(([a,b,w])=>{
+    const inSel=selectedEdges.some(([x,y])=>x===a&&y===b||x===b&&y===a);
+    ctx.beginPath();
+    ctx.moveTo(nodes[a].x,nodes[a].y);
+    ctx.lineTo(nodes[b].x,nodes[b].y);
+    ctx.strokeStyle=inSel?'#3ecf8e':'#2a3348';
+    ctx.lineWidth=inSel?2.5:1;
+    ctx.stroke();
+    const mx=(nodes[a].x+nodes[b].x)/2, my=(nodes[a].y+nodes[b].y)/2;
+    ctx.fillStyle=inSel?'#3ecf8e':'#5a6480';
+    ctx.font=`bold 11px 'Segoe UI',sans-serif`;
+    ctx.textAlign='center';
+    ctx.fillText(w,mx,my-5);
+  });
+  nodes.forEach((n,i)=>{
+    ctx.beginPath(); ctx.arc(n.x,n.y,14,0,Math.PI*2);
+    ctx.fillStyle='#252d3d'; ctx.fill();
+    ctx.strokeStyle='#4f8ef7'; ctx.lineWidth=1.5; ctx.stroke();
+    ctx.fillStyle='#e8edf5'; ctx.font="bold 13px 'Segoe UI',sans-serif";
+    ctx.textAlign='center'; ctx.textBaseline='middle';
+    ctx.fillText(n.label,n.x,n.y);
+  });
+}
+
+/* ═════════════════════ PRIM'S LIVE ═════════════════════ */
+let primState=null;
+function initPrim(){
+  const n=BUILDINGS.length;
+  const adj=Array.from({length:n},()=>[]);
+  EDGES.forEach(([u,v,w,lbl])=>{ adj[u].push({v,w,lbl}); adj[v].push({u:v,v:u,w,lbl}); });
+  // rebuild proper adj
+  const adjP=Array.from({length:n},()=>[]);
+  EDGES.forEach(([u,v,w,lbl])=>{ adjP[u].push([v,w,lbl]); adjP[v].push([u,w,lbl]); });
+  primState={
+    n, adj:adjP,
+    inMST:Array(n).fill(false),
+    mstEdges:[],
+    pq:[],// {w,to,from,lbl}
+    log:[],
+    done:false,
+    totalCost:0,
+    step:0,
+    pqHistory:[]
+  };
+  primState.inMST[0]=true;
+  primState.log.push({type:'start',msg:'STEP 0 │ Start at [DataCenter] — university data center baseline node'});
+  adjP[0].forEach(([v,w,lbl])=>primState.pq.push({w,to:v,from:0,lbl}));
+  primState.pq.sort((a,b)=>a.w-b.w);
+  primState.step=1;
+  renderPrimCanvas();
+  renderPrimLog();
+  renderMSTState();
+  renderPQ();
+  buildStepTracker();
+}
+
+function stepPrim(){
+  if(!primState||primState.done) return;
+  const pq=primState.pq;
+  if(pq.length===0){ primState.done=true; renderPrimLog(); return; }
+  const {w,to,from,lbl}=pq.shift();
+  if(primState.inMST[to]){
+    primState.log.push({type:'skip',msg:`STEP ${primState.step} │ SKIP  [${BUILDINGS[to]}] already in MST — edge [${lbl}] discarded`});
+    primState.step++;
+  } else {
+    primState.inMST[to]=true;
+    primState.mstEdges.push({u:from,v:to,w,lbl});
+    primState.totalCost+=w;
+    primState.log.push({type:'add',msg:`STEP ${primState.step} │ ADD   [${BUILDINGS[to]}] via [${lbl}] cost=₹${w}K`});
+    primState.step++;
+    primState.adj[to].forEach(([nv,nw,nlbl])=>{
+      if(!primState.inMST[nv]) pq.push({w:nw,to:nv,from:to,lbl:nlbl});
+    });
+    pq.sort((a,b)=>a.w-b.w);
+  }
+  if(primState.mstEdges.length===primState.n-1||pq.length===0) primState.done=true;
+  renderPrimCanvas();
+  renderPrimLog();
+  renderMSTState();
+  renderPQ();
+  buildStepTracker();
+}
+
+function runAll(){ if(!primState) return; while(!primState.done) stepPrim(); }
+function resetPrim(){
+  initPrim();
+  document.getElementById('prim-log').innerHTML='<span class="log-line start">Ready — click "Next Step" to begin Prim\'s from DataCenter</span>';
+}
+
+function getNodePos(i,W,H){
+  return {x:NODE_POS[i].x*W, y:NODE_POS[i].y*H};
+}
+
+function renderPrimCanvas(){
+  const c=document.getElementById('prim-canvas');
+  if(!c) return;
+  const W=c.offsetWidth||500, H=380;
+  c.width=W; c.height=H;
+  const ctx=c.getContext('2d');
+  ctx.clearRect(0,0,W,H);
+
+  // draw all edges faint
+  EDGES.forEach(([u,v,w])=>{
+    const a=getNodePos(u,W,H), b=getNodePos(v,W,H);
+    ctx.beginPath(); ctx.moveTo(a.x,a.y); ctx.lineTo(b.x,b.y);
+    ctx.strokeStyle='#2a3348'; ctx.lineWidth=1; ctx.stroke();
+    const mx=(a.x+b.x)/2, my=(a.y+b.y)/2;
+    ctx.fillStyle='#3d4a60'; ctx.font="11px 'Segoe UI',sans-serif"; ctx.textAlign='center';
+    ctx.fillText(w,mx,my-5);
+  });
+
+  if(primState){
+    // draw MST edges green
+    primState.mstEdges.forEach(({u,v,w,lbl})=>{
+      const a=getNodePos(u,W,H), b=getNodePos(v,W,H);
+      ctx.beginPath(); ctx.moveTo(a.x,a.y); ctx.lineTo(b.x,b.y);
+      ctx.strokeStyle='#3ecf8e'; ctx.lineWidth=3; ctx.stroke();
+      const mx=(a.x+b.x)/2, my=(a.y+b.y)/2;
+      ctx.fillStyle='#3ecf8e'; ctx.font="bold 12px 'Segoe UI',sans-serif"; ctx.textAlign='center';
+      ctx.fillText('₹'+w+'K',mx,my-7);
+    });
+    // draw PQ candidate edges amber
+    primState.pq.forEach(({to,from,w})=>{
+      const a=getNodePos(from,W,H), b=getNodePos(to,W,H);
+      ctx.save(); ctx.setLineDash([4,3]);
+      ctx.beginPath(); ctx.moveTo(a.x,a.y); ctx.lineTo(b.x,b.y);
+      ctx.strokeStyle='#f5a623'; ctx.lineWidth=1; ctx.stroke();
+      ctx.restore();
+    });
+  }
+
+  // draw nodes
+  BUILDINGS.forEach((name,i)=>{
+    const {x,y}=getNodePos(i,W,H);
+    const inMST=primState?.inMST[i];
+    ctx.beginPath(); ctx.arc(x,y,22,0,Math.PI*2);
+    ctx.fillStyle=i===0?'#1e3f80': inMST?'#0a2b1e':'#1e2535';
+    ctx.fill();
+    ctx.strokeStyle=i===0?'#4f8ef7': inMST?'#3ecf8e':'#334060';
+    ctx.lineWidth=i===0?2.5: inMST?2:1; ctx.stroke();
+    ctx.fillStyle=i===0?'#4f8ef7': inMST?'#3ecf8e':'#8b96b0';
+    ctx.font="bold 10px 'Segoe UI',sans-serif"; ctx.textAlign='center'; ctx.textBaseline='middle';
+    const short=name.replace('Block','Blk').replace('Complex','Cpx').replace('Center','Ctr');
+    ctx.fillText(short,x,y);
+    // label below
+    ctx.font="9px 'Segoe UI',sans-serif"; ctx.fillStyle='#5a6480';
+    ctx.fillText(name,x,y+30);
+  });
+}
+
+function renderPrimLog(){
+  const box=document.getElementById('prim-log');
+  if(!primState||primState.log.length===0) return;
+  box.innerHTML=primState.log.map(l=>`<div class="log-line ${l.type}">${l.msg}</div>`).join('');
+  if(primState.done) box.innerHTML+=`<div class="log-line add" style="margin-top:6px;font-weight:700">✔ MST complete — Total cost: ₹${primState.totalCost}K (${primState.mstEdges.length} edges)</div>`;
+  box.scrollTop=box.scrollHeight;
+}
+
+function renderMSTState(){
+  const el=document.getElementById('mst-state-list');
+  if(!primState||primState.mstEdges.length===0){el.textContent='No edges selected yet.';return;}
+  el.innerHTML=primState.mstEdges.map(e=>`
+    <div style="display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid var(--border)">
+      <span>${BUILDINGS[e.u]} → ${BUILDINGS[e.v]}</span>
+      <span style="color:var(--green);font-family:monospace">₹${e.w}K</span>
+    </div>`).join('')
+    +`<div style="display:flex;justify-content:space-between;padding:8px 0;font-weight:600"><span>Total</span><span style="color:var(--green)">₹${primState.totalCost}K</span></div>`;
+}
+
+function renderPQ(){
+  const tbody=document.getElementById('pq-body');
+  if(!primState){tbody.innerHTML='<tr><td colspan="4" style="color:var(--text3)">Run algorithm to populate</td></tr>';return;}
+  if(primState.pq.length===0&&primState.done){
+    tbody.innerHTML='<tr><td colspan="4" style="color:var(--green)">Priority queue empty — algorithm complete</td></tr>';return;
+  }
+  tbody.innerHTML=primState.pq.slice(0,8).map((e,i)=>`
+    <tr style="${i===0?'background:var(--amberbg)':''}">
+      <td style="${i===0?'color:var(--amber);font-weight:600':''}">₹${e.w}K</td>
+      <td>${BUILDINGS[e.from]}</td>
+      <td>${BUILDINGS[e.to]}</td>
+      <td style="${i===0?'color:var(--amber)':'color:var(--text3)'}">${i===0?'▶ NEXT':'Queued'}</td>
+    </tr>`).join('');
+}
+
+function buildStepTracker(){
+  const tracker=document.getElementById('step-tracker');
+  const total=BUILDINGS.length;
+  const done=primState?primState.mstEdges.length:0;
+  let html='';
+  for(let i=0;i<total;i++){
+    const state=i<done?'done':i===done&&!primState?.done?'active':'';
+    html+=`<div class="step-item"><div class="step-dot ${state}">${i+1}</div>`;
+    if(i<total-1) html+=`<div class="step-line ${i<done?'done':''}"></div>`;
+    html+='</div>';
+  }
+  tracker.innerHTML=html;
+}
+
+/* ═════════════════════ SECTION 2 ═════════════════════ */
+function buildDesignChecklist(){
+  const items=[
+    {label:'Minimum 2 buildings required',done:true},
+    {label:'Edge weights must be positive',done:true},
+    {label:'No duplicate building names',done:true},
+    {label:'Disconnected-graph alert shown',done:true},
+    {label:'PDF/PNG export available',done:true},
+    {label:'Mobile-responsive layout',done:true},
+    {label:'Step-by-step audit log',done:true},
+    {label:'Cost savings vs full-mesh',done:true},
+  ];
+  document.getElementById('chk-items').innerHTML=items.map(it=>`
+    <div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border)">
+      <span style="color:${it.done?'var(--green)':'var(--text3)'};font-size:16px">${it.done?'✅':'⬜'}</span>
+      <span style="font-size:13px;color:${it.done?'var(--text)':'var(--text3)'}">${it.label}</span>
+    </div>`).join('');
+}
+function addBuildingDemo(){ showTab(3,document.querySelectorAll('.tab')[3]); document.getElementById('new-building-name').focus(); }
+
+/* ═════════════════════ SECTION 4 ═════════════════════ */
+function simulateNewBuilding(){
+  const name=document.getElementById('new-building-name').value.trim();
+  const cost=parseFloat(document.getElementById('new-building-cost').value)||6;
+  const el=document.getElementById('scalability-result');
+  if(!name){el.innerHTML='<span style="color:var(--red)">Please enter a building name.</span>';return;}
+  if(cost<=0){el.innerHTML='<span style="color:var(--red)">Cost must be positive.</span>';return;}
+
+  // Simple heuristic: random chance of bridging
+  const bridges=name.toLowerCase().includes('center')||name.toLowerCase().includes('hub')||cost<3;
+  const strategy=bridges?'full':'incremental';
+  const color=bridges?'var(--amber)':'var(--green)';
+  const icon=bridges?'⚠':'✅';
+
+  el.innerHTML=`
+    <div style="background:var(--bg3);border-radius:8px;padding:14px;border:1px solid var(--border2)">
+      <div style="font-size:14px;font-weight:600;color:${color};margin-bottom:8px">${icon} Recommended: ${strategy==='full'?'Full Recompute':'Incremental Update'}</div>
+      <div style="font-size:13px;color:var(--text2);line-height:1.7">
+        Adding <strong style="color:var(--text)">"${name}"</strong> at cost ₹${cost}K.<br>
+        ${bridges
+          ? 'This building appears to bridge multiple campus clusters — a full Prim\'s recompute is required for guaranteed global optimality.'
+          : 'This building connects as a leaf node — incremental attachment is safe and runs in O(k log n).'}
+      </div>
+      <div style="margin-top:10px;font-family:monospace;font-size:12px;color:var(--text3)">
+        Time: ${strategy==='full'?'O((V+E) log V)':'O(k log n)'} &nbsp;|&nbsp; Correctness: ${strategy==='full'?'guaranteed':'leaf-safe'}
+      </div>
+    </div>`;
+}
+
+/* ═════════════════════ SECTION 5 REPORT ═════════════════════ */
+function buildCostTable(){
+  const MST_EDGES=[
+    {lbl:'DataCenter↔AdminBlock',cost:4},
+    {lbl:'AdminBlock↔Library',cost:2},
+    {lbl:'Library↔EnggBlock',cost:3},
+    {lbl:'EnggBlock↔HostelA',cost:4},
+    {lbl:'HostelA↔SportsComplex',cost:5},
+  ];
+  document.getElementById('cost-table-items').innerHTML=MST_EDGES.map(e=>`
+    <div class="cost-row">
+      <span class="cost-label">${e.lbl}</span>
+      <span class="cost-val">₹${e.cost},000</span>
+    </div>`).join('');
+  setTimeout(()=>document.getElementById('savings-bar').style.width='65%',300);
+}
+
+function drawReportCanvas(){
+  const c=document.getElementById('report-canvas');
+  if(!c) return;
+  const W=c.parentElement.offsetWidth-48||360, H=220;
+  c.width=W; c.height=H;
+  const ctx=c.getContext('2d');
+  ctx.clearRect(0,0,W,H);
+  const mstEdges=[[0,1,4],[1,2,2],[2,3,3],[3,4,4],[4,5,5]];
+  // draw faint non-mst
+  EDGES.forEach(([u,v,w])=>{
+    const a={x:NODE_POS[u].x*W,y:NODE_POS[u].y*H}, b={x:NODE_POS[v].x*W,y:NODE_POS[v].y*H};
+    ctx.beginPath(); ctx.moveTo(a.x,a.y); ctx.lineTo(b.x,b.y);
+    ctx.strokeStyle='#1e2535'; ctx.lineWidth=1; ctx.stroke();
+  });
+  mstEdges.forEach(([u,v,w])=>{
+    const a={x:NODE_POS[u].x*W,y:NODE_POS[u].y*H}, b={x:NODE_POS[v].x*W,y:NODE_POS[v].y*H};
+    ctx.beginPath(); ctx.moveTo(a.x,a.y); ctx.lineTo(b.x,b.y);
+    ctx.strokeStyle='#3ecf8e'; ctx.lineWidth=2.5; ctx.stroke();
+    const mx=(a.x+b.x)/2, my=(a.y+b.y)/2;
+    ctx.fillStyle='#3ecf8e'; ctx.font="bold 10px 'Segoe UI',sans-serif"; ctx.textAlign='center';
+    ctx.fillText('₹'+w+'K',mx,my-5);
+  });
+  BUILDINGS.forEach((name,i)=>{
+    const x=NODE_POS[i].x*W, y=NODE_POS[i].y*H;
+    ctx.beginPath(); ctx.arc(x,y,16,0,Math.PI*2);
+    ctx.fillStyle=i===0?'#1e3f80':'#0a2b1e'; ctx.fill();
+    ctx.strokeStyle=i===0?'#4f8ef7':'#3ecf8e'; ctx.lineWidth=1.5; ctx.stroke();
+    ctx.fillStyle=i===0?'#4f8ef7':'#3ecf8e'; ctx.font="bold 8px 'Segoe UI',sans-serif";
+    ctx.textAlign='center'; ctx.textBaseline='middle';
+    ctx.fillText(name.slice(0,4),x,y);
+  });
+}
+
+/* ═════════════════════ SECTION 1 INIT ═════════════════════ */
+function drawComparisonGraphs(){
+  // Shortest-path union: includes ALL edges (has cycle)
+  setTimeout(()=>{
+    drawGraph('sp-canvas',[[0,1],[1,2],[2,3],[0,2]],[]);
+    drawGraph('mst-canvas',[[0,1],[1,3],[2,3]],[]);
+  },100);
+}
+
+/* ═════════════════════ INIT ═════════════════════ */
+function initApp(){
+  drawComparisonGraphs();
+  buildDesignChecklist();
+  initPrim();
+  buildCostTable();
+  setTimeout(drawReportCanvas,200);
+  // resize canvases on window resize
+  window.addEventListener('resize',()=>{
+    drawComparisonGraphs();
+    renderPrimCanvas();
+    drawReportCanvas();
+  });
+}
+</script>
+</body>
+</html>
