@@ -1,9 +1,15 @@
-from http.server import HTTPServer, SimpleHTTPRequestHandler
+from http.server import HTTPServer, BaseHTTPRequestHandler
 
-HOST = "0.0.0.0"
-PORT = 8000
+class Handler(BaseHTTPRequestHandler):
+    def do_GET(self):
+        self.send_response(200)
+        self.send_header("Content-type", "text/html")
+        self.end_headers()
 
-server = HTTPServer((HOST, PORT), SimpleHTTPRequestHandler)
+        with open("index.html", "rb") as f:
+            self.wfile.write(f.read())
 
-print(f"Server running at http://localhost:{PORT}")
+server = HTTPServer(("0.0.0.0", 8000), Handler)
+
+print("Server running at http://localhost:8000")
 server.serve_forever()
